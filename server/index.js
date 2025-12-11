@@ -21,7 +21,10 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME || 'the_boys_db',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    ssl: {
+        rejectUnauthorized: false // Required for TiDB Cloud Serverless
+    }
 });
 
 // Helper to check DB connection
