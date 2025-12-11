@@ -11,8 +11,9 @@ const apiFetch = async (endpoint: string, options?: RequestInit) => {
     });
     if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
     return await res.json();
-  } catch (err) {
+  } catch (err: any) {
     console.error(`Fetch failed for ${endpoint}:`, err);
+    alert(`CONNECTION ERROR: ${err.message}\nCheck specific error in Console (F12).`);
     // Fallback? Retrow? For now, rethrow or return empty to prevent crash
     if (endpoint.includes('users')) return [];
     return [];

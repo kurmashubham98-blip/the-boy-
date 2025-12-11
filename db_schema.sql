@@ -1,6 +1,4 @@
-CREATE DATABASE IF NOT EXISTS the_boys_db;
-USE the_boys_db;
-
+-- Run this in the 'test' database provided by TiDB
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(255) PRIMARY KEY,
