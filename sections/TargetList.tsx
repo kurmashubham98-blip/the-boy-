@@ -74,9 +74,9 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
         const files = e.target.files;
         if (!files) return;
 
-        const remaining = 10 - proofImages.length;
+        const remaining = 5 - proofImages.length;
         if (remaining <= 0) {
-            alert("Maximum 10 images allowed.");
+            alert("Maximum 5 images allowed.");
             return;
         }
 
@@ -100,6 +100,14 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
 
     const handleSubmitProof = async () => {
         if (!selectedBountyId || proofImages.length === 0) return;
+
+        // Check total size (rough estimate: Base64 is ~1.37x original)
+        const totalSize = proofImages.reduce((acc, img) => acc + img.length, 0);
+        if (totalSize > 5 * 1024 * 1024) { // 5MB total limit
+            alert("Total file size too large! Please remove some images or use smaller screenshots.");
+            return;
+        }
+
         setIsLoading(true);
         try {
             await StorageService.submitBounty({
@@ -249,7 +257,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                     <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl max-w-lg w-full space-y-6">
                         <h3 className="text-2xl font-bold text-white">UPLOAD INTEL</h3>
                         <p className="text-gray-400 text-sm">Target: {bounties.find(b => b.id === selectedBountyId)?.title}</p>
-                        <p className="text-xs text-gray-500">Upload 1-10 screenshots as proof ({proofImages.length}/10)</p>
+                        <p className="text-xs text-gray-500">Upload 1-5 screenshots as proof ({proofImages.length}/5)</p>
 
                         {/* Image Grid */}
                         {proofImages.length > 0 && (
@@ -266,7 +274,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                             </div>
                         )}
 
-                        {proofImages.length < 10 && (
+                        {proofImages.length < 5 && (
                             <div
                                 className="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-neon-blue transition-colors"
                                 onClick={() => fileInputRef.current?.click()}
