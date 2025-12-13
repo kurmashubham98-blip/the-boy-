@@ -1,4 +1,4 @@
-```typescript
+
 import React, { useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { Card, Badge } from '../components/Components';
@@ -45,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck,
                         <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
                             <div
                                 className="bg-neon-blue h-full transition-all duration-500"
-                                style={{ width: `${ Math.min(progress, 100) }% ` }}
+                                style={{ width: `${Math.min(progress, 100)}% ` }}
                             />
                         </div>
                     </div>
@@ -54,13 +54,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck,
                 <Card title="Leaderboard (Live v1.1)">
                     <div className="space-y-3">
                         {sortedUsers.map((u, idx) => (
-                            <div 
-                                key={u.id} 
+                            <div
+                                key={u.id}
                                 className="flex items-center justify-between p-2 rounded hover:bg-white/5 cursor-pointer"
                                 onClick={() => onUserClick(u.id)}
                             >
                                 <div className="flex items-center gap-3">
-                                    <span className={`font - mono font - bold w - 6 ${ idx === 0 ? 'text-yellow-400' : 'text-gray-500' } `}>#{idx + 1}</span>
+                                    <span className={`font - mono font - bold w - 6 ${idx === 0 ? 'text-yellow-400' : 'text-gray-500'} `}>#{idx + 1}</span>
                                     {/* Avatar Update */}
                                     <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden border border-gray-600">
                                         {u.avatar ? (
