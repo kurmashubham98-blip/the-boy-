@@ -64,6 +64,36 @@ export interface Solution {
   votes: string[]; // User IDs
 }
 
+export enum BountyStatus {
+  OPEN = 'OPEN',
+  CLOSED = 'CLOSED'
+}
+
+export enum SubmissionStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED'
+}
+
+export interface Bounty {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  status: BountyStatus;
+  createdAt: string;
+}
+
+export interface BountySubmission {
+  id: string;
+  bountyId: string;
+  userId: string;
+  proof: string; // Base64 image
+  status: SubmissionStatus;
+  feedback?: string;
+  submittedAt: string;
+}
+
 export interface AppState {
   currentUser: User | null;
   users: User[];

@@ -143,6 +143,33 @@ async function initDB(conn) {
             )
         `);
 
+        // Bounties Table
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS bounties (
+                id VARCHAR(255) PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                reward INT DEFAULT 0,
+                status ENUM('OPEN', 'CLOSED') DEFAULT 'OPEN',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Bounty Submissions Table
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS bounty_submissions (
+                id VARCHAR(255) PRIMARY KEY,
+                bounty_id VARCHAR(255),
+                user_id VARCHAR(255),
+                proof LONGTEXT,
+                status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+                feedback TEXT,
+                submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (bounty_id) REFERENCES bounties(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
         console.log("✅ Schema initialized");
     } catch (err) {
         console.error("❌ Schema initialization failed:", err);
@@ -376,6 +403,105 @@ app.post('/api/questions', async (req, res) => {
     }
 });
 
+
+// BOUNTIES
+app.get('/api/bounties', async (req, res) => {
+    try {
+        const [bounties] = await pool.query('SELECT * FROM bounties ORDER BY created_at DESC');
+
+        // Return bounties
+        const result = bounties.map(b => ({
+            id: b.id,
+            title: b.title,
+            description: b.description,
+            reward: b.reward,
+            status: b.status,
+            createdAt: b.created_at
+        }));
+        res.json(result);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/bounties', async (req, res) => {
+    const { id, title, description, reward } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO bounties (id, title, description, reward) VALUES (?, ?, ?, ?)',
+            [id, title, description, reward]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// SUBMISSIONS
+app.get('/api/bounties/submissions', async (req, res) => {
+    try {
+        // Return ALL submissions for Admin
+        const [rows] = await pool.query('SELECT * FROM bounty_submissions ORDER BY submitted_at DESC');
+        const submissions = rows.map(s => ({
+            id: s.id,
+            bountyId: s.bounty_id,
+            userId: s.user_id,
+            proof: s.proof,
+            status: s.status,
+            feedback: s.feedback,
+            submittedAt: s.submitted_at
+        }));
+        res.json(submissions);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/bounties/submit', async (req, res) => {
+    const { id, bountyId, userId, proof } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO bounty_submissions (id, bounty_id, user_id, proof) VALUES (?, ?, ?, ?)',
+            [id, bountyId, userId, proof]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/bounties/verify', async (req, res) => {
+    const { submissionId, status, feedback, bountyId, userId, reward } = req.body;
+    try {
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        // Update Submission Status
+        await connection.query(
+            'UPDATE bounty_submissions SET status = ?, feedback = ? WHERE id = ?',
+            [status, feedback || '', submissionId]
+        );
+
+        // If Approved, Award XP
+        if (status === 'APPROVED') {
+            await connection.query(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [reward, userId]
+            );
+        }
+
+        await connection.commit();
+        connection.release();
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

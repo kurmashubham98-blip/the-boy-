@@ -1,4 +1,4 @@
-import { User, Task, Question, UserRole } from '../types';
+import { User, Task, Question, UserRole, Bounty, BountySubmission } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://the-boy.onrender.com/api';
 
@@ -58,6 +58,36 @@ export const StorageService = {
     await apiFetch('/questions', {
       method: 'POST',
       body: JSON.stringify(questions)
+    });
+  },
+
+  // --- BOUNTIES ---
+  getBounties: async (): Promise<Bounty[]> => {
+    return await apiFetch('/bounties');
+  },
+
+  createBounty: async (bounty: Partial<Bounty>) => {
+    await apiFetch('/bounties', {
+      method: 'POST',
+      body: JSON.stringify(bounty)
+    });
+  },
+
+  getSubmissions: async (): Promise<BountySubmission[]> => {
+    return await apiFetch('/bounties/submissions');
+  },
+
+  submitBounty: async (submission: Partial<BountySubmission>) => {
+    await apiFetch('/bounties/submit', {
+      method: 'POST',
+      body: JSON.stringify(submission)
+    });
+  },
+
+  verifySubmission: async (data: { submissionId: string, status: string, feedback: string, bountyId: string, userId: string, reward: number }) => {
+    await apiFetch('/bounties/verify', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   },
 
