@@ -25,6 +25,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
 
     // Admin: View Submissions
     const [viewingSubmissions, setViewingSubmissions] = useState(false);
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
     const isAdmin = user.role === UserRole.ADMIN;
 
@@ -70,7 +71,40 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
         }
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Compress image using canvas
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 800; // Max dimension
+                    let { width, height } = img;
+
+                    if (width > height && width > maxSize) {
+                        height = (height * maxSize) / width;
+                        width = maxSize;
+                    } else if (height > maxSize) {
+                        width = (width * maxSize) / height;
+                        height = maxSize;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d')!;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to JPEG with 60% quality
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
 
@@ -80,18 +114,12 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
             return;
         }
 
-        const filesToProcess = Array.from(files);
-        filesToProcess.slice(0, remaining).forEach((file: File) => {
-            if (file.size > 5 * 1024 * 1024) {
-                alert(`${file.name} is too large (Max 5MB per image)`);
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProofImages(prev => [...prev, reader.result as string]);
-            };
-            reader.readAsDataURL(file);
-        });
+        const filesToProcess = Array.from(files).slice(0, remaining);
+
+        for (const file of filesToProcess as File[]) {
+            const compressed = await compressImage(file);
+            setProofImages(prev => [...prev, compressed]);
+        }
     };
 
     const removeImage = (index: number) => {
@@ -186,7 +214,13 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                                             return (
                                                 <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
                                                     {(Array.isArray(images) ? images : [images]).map((img, idx) => (
-                                                        <img key={idx} src={img} alt={`Proof ${idx + 1}`} className="w-full h-24 object-cover rounded" />
+                                                        <img
+                                                            key={idx}
+                                                            src={img}
+                                                            alt={`Proof ${idx + 1}`}
+                                                            className="w-full h-24 object-cover rounded cursor-pointer hover:ring-2 hover:ring-neon-blue transition-all"
+                                                            onClick={() => setExpandedImage(img)}
+                                                        />
                                                     ))}
                                                 </div>
                                             );
@@ -292,6 +326,25 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                             <Button onClick={handleSubmitProof} disabled={proofImages.length === 0 || isLoading}>TRANSMIT ({proofImages.length})</Button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Expanded Image Modal */}
+            {expandedImage && (
+                <div
+                    className="fixed inset-0 bg-black/95 flex items-center justify-center z-[60] p-4 cursor-pointer"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <img
+                        src={expandedImage}
+                        alt="Expanded proof"
+                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    />
+                    <button
+                        className="absolute top-4 right-4 text-white text-3xl hover:text-red-500 transition-colors"
+                        onClick={() => setExpandedImage(null)}
+                    >×</button>
+                    <p className="absolute bottom-4 text-gray-500 text-sm">Click anywhere to close</p>
                 </div>
             )}
         </div>
