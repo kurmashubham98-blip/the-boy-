@@ -10,10 +10,11 @@ interface CouncilProps {
     onAddQuestion: (q: Partial<Question>) => void;
     onAddSolution: (qId: string, solution: string) => void;
     onVoteSolution: (qId: string, sId: string) => void;
+    onMarkBestAnswer: (qId: string, sId: string) => void;
     isAdmin: boolean;
 }
 
-export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVoteQuestion, onAddQuestion, onAddSolution, onVoteSolution, isAdmin }) => {
+export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVoteQuestion, onAddQuestion, onAddSolution, onVoteSolution, onMarkBestAnswer, isAdmin }) => {
     const [newQTitle, setNewQTitle] = useState('');
     const [newQDesc, setNewQDesc] = useState('');
     const [solvingId, setSolvingId] = useState<string | null>(null);
@@ -90,19 +91,33 @@ export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVote
                                                 const authorName = users.find(u => u.id === sol.authorId)?.name || 'Unknown Boy';
 
                                                 return (
-                                                    <div key={sol.id} className="bg-black/30 p-3 rounded flex justify-between items-center">
-                                                        <div>
+                                                    <div key={sol.id} className={`p-3 rounded flex justify-between items-center ${sol.isBestAnswer ? 'bg-green-900/30 border border-green-600' : 'bg-black/30'}`}>
+                                                        <div className="flex-1">
+                                                            {sol.isBestAnswer && (
+                                                                <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded mb-1 inline-block">✓ BEST ANSWER (+10 XP)</span>
+                                                            )}
                                                             <p className="text-sm">{sol.content}</p>
                                                             {showAuthor && <p className="text-xs text-neon-blue mt-1">By: {isAuthor ? 'You' : authorName}</p>}
                                                         </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className={`text-sm ${sol.votes.includes(user.id) ? 'text-neon-green' : 'text-gray-500'}`}
-                                                            onClick={() => onVoteSolution(q.id, sol.id)}
-                                                            disabled={hasVotedSol && !sol.votes.includes(user.id)}
-                                                        >
-                                                            ▲ {sol.votes.length}
-                                                        </Button>
+                                                        <div className="flex items-center gap-2">
+                                                            {isAdmin && !sol.isBestAnswer && !q.solutions.some(s => s.isBestAnswer) && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    className="text-xs text-yellow-500"
+                                                                    onClick={() => onMarkBestAnswer(q.id, sol.id)}
+                                                                >
+                                                                    ⭐ Mark Best
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="ghost"
+                                                                className={`text-sm ${sol.votes.includes(user.id) ? 'text-neon-green' : 'text-gray-500'}`}
+                                                                onClick={() => onVoteSolution(q.id, sol.id)}
+                                                                disabled={hasVotedSol && !sol.votes.includes(user.id)}
+                                                            >
+                                                                ▲ {sol.votes.length}
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 )
                                             })}

@@ -329,7 +329,11 @@ const App: React.FC = () => {
 
   const voteQuestion = async (qId: string, type: 'up' | 'down') => {
     if (!user) return;
-    const newQuestions = questions.map(q => {
+
+    // Get total BOY count for majority calculation
+    const totalBoys = users.filter(u => u.role === UserRole.BOY).length;
+
+    let updatedQuestions = questions.map(q => {
       if (q.id !== qId) return q;
       const newUp = type === 'up' ? [...q.upvotes, user.id] : q.upvotes;
       const newDown = type === 'down' ? [...q.downvotes, user.id] : q.downvotes;
@@ -337,17 +341,57 @@ const App: React.FC = () => {
       let isDropped = q.dropped;
       if (newDown.length >= 2 && newDown.length > newUp.length) {
         isDropped = true;
-        // Note: Logic for punishment side-effect needs to handle user array update separately
       }
 
       return { ...q, upvotes: newUp, downvotes: newDown, dropped: isDropped, isInterestCheck: isDropped ? false : q.isInterestCheck };
     });
 
-    setQuestions(newQuestions);
-    await StorageService.saveQuestions(newQuestions);
+    setQuestions(updatedQuestions);
+
+    // XP Reward Logic
+    const votedQ = updatedQuestions.find(q => q.id === qId);
+    let userUpdates: { [key: string]: number } = {};
+
+    if (votedQ && type === 'up') {
+      const author = users.find(u => u.id === votedQ.authorId);
+
+      // Admin Upvote = +5 XP (one-time)
+      if (user.role === UserRole.ADMIN && !votedQ.adminApproved && author) {
+        userUpdates[author.id] = (userUpdates[author.id] || 0) + 5;
+        updatedQuestions = updatedQuestions.map(q =>
+          q.id === qId ? { ...q, adminApproved: true } : q
+        );
+      }
+
+      // 50%+ BOY Majority = +5 XP (one-time)
+      if (!votedQ.majorityApproved && author && totalBoys > 0) {
+        const boyUpvotes = votedQ.upvotes.filter(uid =>
+          users.find(u => u.id === uid)?.role === UserRole.BOY
+        ).length;
+
+        if (boyUpvotes >= Math.ceil(totalBoys / 2)) {
+          userUpdates[author.id] = (userUpdates[author.id] || 0) + 5;
+          updatedQuestions = updatedQuestions.map(q =>
+            q.id === qId ? { ...q, majorityApproved: true } : q
+          );
+        }
+      }
+    }
+
+    // Apply XP updates
+    if (Object.keys(userUpdates).length > 0) {
+      const newUsers = users.map(u =>
+        userUpdates[u.id] ? { ...u, points: u.points + userUpdates[u.id] } : u
+      );
+      setUsers(newUsers);
+      await StorageService.saveUsers(newUsers);
+    }
+
+    setQuestions(updatedQuestions);
+    await StorageService.saveQuestions(updatedQuestions);
 
     // Handle dropping punishment (side effect)
-    const droppedQ = newQuestions.find(q => q.id === qId);
+    const droppedQ = updatedQuestions.find(q => q.id === qId);
     if (droppedQ && droppedQ.dropped) {
       const author = users.find(u => u.id === droppedQ.authorId);
       if (author) {
@@ -389,7 +433,35 @@ const App: React.FC = () => {
     await StorageService.saveQuestions(newQuestions);
   };
 
-  // Helper for login screen to auto-fill
+  // Mark solution as Best Answer (Admin only) - awards +10 XP
+  const markBestAnswer = async (qId: string, sId: string) => {
+    if (!user || user.role !== UserRole.ADMIN) return;
+
+    const question = questions.find(q => q.id === qId);
+    const solution = question?.solutions.find(s => s.id === sId);
+    if (!solution || solution.isBestAnswer) return; // Already marked
+
+    // Update question with best answer flag
+    const newQuestions = questions.map(q => {
+      if (q.id !== qId) return q;
+      return {
+        ...q,
+        solutions: q.solutions.map(s => ({ ...s, isBestAnswer: s.id === sId }))
+      };
+    });
+
+    // Award +10 XP to solution author
+    const author = users.find(u => u.id === solution.authorId);
+    if (author) {
+      const rewarded = { ...author, points: author.points + 10 };
+      const newUsers = users.map(u => u.id === author.id ? rewarded : u);
+      setUsers(newUsers);
+      await StorageService.saveUsers(newUsers);
+    }
+
+    setQuestions(newQuestions);
+    await StorageService.saveQuestions(newQuestions);
+  };
   const quickLogin = (name: string) => {
     setUserNameInput(name);
   };
@@ -560,6 +632,7 @@ const App: React.FC = () => {
             onVoteQuestion={voteQuestion}
             onAddSolution={addSolution}
             onVoteSolution={voteSolution}
+            onMarkBestAnswer={markBestAnswer}
             isAdmin={user.role === UserRole.ADMIN}
           />
         )}

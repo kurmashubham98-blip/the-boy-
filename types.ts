@@ -55,6 +55,8 @@ export interface Question {
   dropped: boolean; // If dropped, user loses 5 points
   solutions: Solution[];
   createdAt: string;
+  adminApproved?: boolean; // Track if admin already gave +5 XP
+  majorityApproved?: boolean; // Track if 50%+ BOY vote reward given
 }
 
 export interface Solution {
@@ -62,6 +64,7 @@ export interface Solution {
   authorId: string;
   content: string;
   votes: string[]; // User IDs
+  isBestAnswer?: boolean; // Marked by Admin
 }
 
 export enum BountyStatus {
