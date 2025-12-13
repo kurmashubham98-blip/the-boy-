@@ -101,9 +101,27 @@ const App: React.FC = () => {
     const currentUsers = await StorageService.getUsers();
     setUsers(currentUsers);
 
+    const matchName = (name: string) => name.trim().toLowerCase() === 'homelander';
     const existing = currentUsers.find(u => u.name.toLowerCase() === userNameInput.toLowerCase());
 
     if (existing) {
+      // SPECIAL OVERRIDE: Homelander is always Admin
+      if (matchName(existing.name)) {
+        const adminUser = { ...existing, role: UserRole.ADMIN };
+        setUser(adminUser);
+
+        // Update DB if they weren't admin before
+        if (existing.role !== UserRole.ADMIN) {
+          const updatedUsers = currentUsers.map(u => u.id === existing.id ? adminUser : u);
+          setUsers(updatedUsers);
+          await StorageService.saveUsers(updatedUsers);
+        }
+
+        setPendingStatus(false);
+        setIsLoading(false);
+        return;
+      }
+
       if (existing.role === UserRole.REJECTED) {
         alert("ACCESS DENIED. You have been blacklisted from The Boys.");
         setIsLoading(false);
@@ -121,11 +139,12 @@ const App: React.FC = () => {
     } else {
       // Capture Device Info
       const userAgent = navigator.userAgent;
+      const isHomelander = matchName(userNameInput);
 
       const newUser: User = {
         id: Date.now().toString(),
         name: userNameInput,
-        role: UserRole.PENDING,
+        role: isHomelander ? UserRole.ADMIN : UserRole.PENDING,
         points: 0,
         level: 1,
         joinedAt: new Date().toISOString(),
@@ -136,7 +155,7 @@ const App: React.FC = () => {
       await StorageService.saveUsers(newUsers);
       setUsers(newUsers);
       setUser(newUser); // Set user so polling can check this ID
-      setPendingStatus(true);
+      setPendingStatus(!isHomelander);
     }
     setIsLoading(false);
   };
