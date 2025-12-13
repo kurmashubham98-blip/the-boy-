@@ -20,7 +20,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
 
     // User: Submit Bounty
     const [selectedBountyId, setSelectedBountyId] = useState<string | null>(null);
-    const [proofImage, setProofImage] = useState<string | null>(null);
+    const [proofImages, setProofImages] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Admin: View Submissions
@@ -71,32 +71,46 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            alert("File too large (Max 5MB)");
+        const files = e.target.files;
+        if (!files) return;
+
+        const remaining = 10 - proofImages.length;
+        if (remaining <= 0) {
+            alert("Maximum 10 images allowed.");
             return;
         }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setProofImage(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+
+        const filesToProcess = Array.from(files);
+        filesToProcess.slice(0, remaining).forEach((file: File) => {
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`${file.name} is too large (Max 5MB per image)`);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProofImages(prev => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const removeImage = (index: number) => {
+        setProofImages(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmitProof = async () => {
-        if (!selectedBountyId || !proofImage) return;
+        if (!selectedBountyId || proofImages.length === 0) return;
         setIsLoading(true);
         try {
             await StorageService.submitBounty({
                 id: Date.now().toString(),
                 bountyId: selectedBountyId,
                 userId: user.id,
-                proof: proofImage,
+                proof: JSON.stringify(proofImages), // Store as JSON array
                 status: SubmissionStatus.PENDING
             });
             setSelectedBountyId(null);
-            setProofImage(null);
+            setProofImages([]);
             alert("Intel uploaded to secure server.");
         } catch (e) {
             alert("Upload failed.");
@@ -154,7 +168,21 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                                         <span className="text-xs text-gray-400">{new Date(sub.submittedAt).toLocaleString()}</span>
                                     </div>
                                     <div className="bg-black/50 p-2 rounded border border-gray-800">
-                                        <img src={sub.proof} alt="Proof" className="max-h-64 object-contain mx-auto" />
+                                        {(() => {
+                                            let images: string[] = [];
+                                            try {
+                                                images = JSON.parse(sub.proof);
+                                            } catch {
+                                                images = [sub.proof]; // Fallback for old single-image format
+                                            }
+                                            return (
+                                                <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                                                    {(Array.isArray(images) ? images : [images]).map((img, idx) => (
+                                                        <img key={idx} src={img} alt={`Proof ${idx + 1}`} className="w-full h-24 object-cover rounded" />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                     {sub.status === 'PENDING' && (
                                         <div className="flex gap-4 justify-end">
@@ -221,25 +249,39 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
                     <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl max-w-lg w-full space-y-6">
                         <h3 className="text-2xl font-bold text-white">UPLOAD INTEL</h3>
                         <p className="text-gray-400 text-sm">Target: {bounties.find(b => b.id === selectedBountyId)?.title}</p>
+                        <p className="text-xs text-gray-500">Upload 1-10 screenshots as proof ({proofImages.length}/10)</p>
 
-                        <div
-                            className="border-2 border-dashed border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-neon-blue transition-colors"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            {proofImage ? (
-                                <img src={proofImage} alt="Preview" className="max-h-48 object-contain" />
-                            ) : (
+                        {/* Image Grid */}
+                        {proofImages.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                                {proofImages.map((img, idx) => (
+                                    <div key={idx} className="relative group">
+                                        <img src={img} alt={`Proof ${idx + 1}`} className="w-full h-20 object-cover rounded border border-gray-700" />
+                                        <button
+                                            onClick={() => removeImage(idx)}
+                                            className="absolute top-0 right-0 bg-red-600 text-white text-xs w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >×</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {proofImages.length < 10 && (
+                            <div
+                                className="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-neon-blue transition-colors"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
                                 <div className="text-center text-gray-500">
-                                    <p className="text-4xl mb-2">📷</p>
-                                    <p>Click to upload screenshot</p>
+                                    <p className="text-3xl mb-1">📷</p>
+                                    <p className="text-sm">Click to add images</p>
                                 </div>
-                            )}
-                        </div>
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            </div>
+                        )}
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleImageUpload} />
 
                         <div className="flex gap-4 justify-end">
-                            <Button variant="secondary" onClick={() => { setSelectedBountyId(null); setProofImage(null); }}>CANCEL</Button>
-                            <Button onClick={handleSubmitProof} disabled={!proofImage || isLoading}>TRANSMIT</Button>
+                            <Button variant="secondary" onClick={() => { setSelectedBountyId(null); setProofImages([]); }}>CANCEL</Button>
+                            <Button onClick={handleSubmitProof} disabled={proofImages.length === 0 || isLoading}>TRANSMIT ({proofImages.length})</Button>
                         </div>
                     </div>
                 </div>
