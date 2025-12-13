@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Bounty, BountySubmission, UserRole, BountyStatus, SubmissionStatus } from '../types';
 import { StorageService } from '../services/storageService';
 import { Card, Button, Input, Badge } from '../components/Components';
-import { v4 as uuidv4 } from 'uuid';
+
 
 interface TargetListProps {
     user: User;
@@ -53,7 +53,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
         setIsLoading(true);
         try {
             await StorageService.createBounty({
-                id: uuidv4(),
+                id: Date.now().toString(),
                 title: newTitle,
                 description: newDesc,
                 reward: newReward,
@@ -89,7 +89,7 @@ export const TargetList: React.FC<TargetListProps> = ({ user }) => {
         setIsLoading(true);
         try {
             await StorageService.submitBounty({
-                id: uuidv4(),
+                id: Date.now().toString(),
                 bountyId: selectedBountyId,
                 userId: user.id,
                 proof: proofImage,
