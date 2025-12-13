@@ -119,6 +119,23 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     if (!userNameInput.trim()) return;
 
+    // Capture Device Info (Human Readable)
+    const ua = navigator.userAgent;
+    let os = "Unknown OS";
+    if (ua.indexOf("Win") !== -1) os = "Windows";
+    if (ua.indexOf("Mac") !== -1) os = "MacOS";
+    if (ua.indexOf("Linux") !== -1) os = "Linux";
+    if (ua.indexOf("Android") !== -1) os = "Android";
+    if (ua.indexOf("like Mac") !== -1) os = "iOS";
+
+    let browser = "Unknown Browser";
+    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Safari";
+    if (ua.indexOf("Edg") !== -1) browser = "Edge";
+
+    const deviceFriendly = `${browser} on ${os}`;
+
     setIsLoading(true);
     // Refresh users just in case
     const currentUsers = await StorageService.getUsers();
@@ -128,15 +145,25 @@ const App: React.FC = () => {
     const existing = currentUsers.find(u => u.name.toLowerCase() === userNameInput.toLowerCase());
 
     if (existing) {
+      let activeUser = existing;
+
+      // Update Device Info if different
+      if (existing.deviceDetails !== deviceFriendly) {
+        activeUser = { ...existing, deviceDetails: deviceFriendly };
+        const updatedUsers = currentUsers.map(u => u.id === existing.id ? activeUser : u);
+        setUsers(updatedUsers);
+        await StorageService.saveUsers(updatedUsers);
+      }
+
       // SPECIAL OVERRIDE: Homelander is always Admin
-      if (matchName(existing.name)) {
-        const adminUser = { ...existing, role: UserRole.ADMIN };
+      if (matchName(activeUser.name)) {
+        const adminUser = { ...activeUser, role: UserRole.ADMIN };
         setUser(adminUser);
-        localStorage.setItem('the_boys_user', existing.name); // PERSIST
+        localStorage.setItem('the_boys_user', activeUser.name); // PERSIST
 
         // Update DB if they weren't admin before
-        if (existing.role !== UserRole.ADMIN) {
-          const updatedUsers = currentUsers.map(u => u.id === existing.id ? adminUser : u);
+        if (activeUser.role !== UserRole.ADMIN) {
+          const updatedUsers = currentUsers.map(u => u.id === activeUser.id ? adminUser : u);
           setUsers(updatedUsers);
           await StorageService.saveUsers(updatedUsers);
         }
@@ -146,40 +173,24 @@ const App: React.FC = () => {
         return;
       }
 
-      if (existing.role === UserRole.REJECTED) {
+      if (activeUser.role === UserRole.REJECTED) {
         alert("ACCESS DENIED. You have been blacklisted from The Boys.");
         localStorage.removeItem('the_boys_user');
         setIsLoading(false);
         return;
       }
-      if (existing.role === UserRole.PENDING) {
+      if (activeUser.role === UserRole.PENDING) {
         setPendingStatus(true);
         // Temporarily set user so polling knows who to check
-        setUser(existing);
-        localStorage.setItem('the_boys_user', existing.name); // PERSIST (So they see pending screen on refresh)
+        setUser(activeUser);
+        localStorage.setItem('the_boys_user', activeUser.name); // PERSIST (So they see pending screen on refresh)
         setIsLoading(false);
         return;
       }
-      setUser(existing);
-      localStorage.setItem('the_boys_user', existing.name); // PERSIST
+      setUser(activeUser);
+      localStorage.setItem('the_boys_user', activeUser.name); // PERSIST
       setPendingStatus(false);
     } else {
-      // Capture Device Info (Human Readable)
-      const ua = navigator.userAgent;
-      let os = "Unknown OS";
-      if (ua.indexOf("Win") !== -1) os = "Windows";
-      if (ua.indexOf("Mac") !== -1) os = "MacOS";
-      if (ua.indexOf("Linux") !== -1) os = "Linux";
-      if (ua.indexOf("Android") !== -1) os = "Android";
-      if (ua.indexOf("like Mac") !== -1) os = "iOS";
-
-      let browser = "Unknown Browser";
-      if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
-      if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
-      if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Safari";
-      if (ua.indexOf("Edg") !== -1) browser = "Edge";
-
-      const deviceFriendly = `${browser} on ${os}`;
       const isHomelander = matchName(userNameInput);
 
       const newUser: User = {
