@@ -18,7 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck 
     }, [user.points, onLevelCheck]);
 
     const sortedUsers = users
-        .filter(u => u.role !== UserRole.REJECTED && u.role !== UserRole.PENDING)
+        .filter(u => u.role === UserRole.ADMIN || u.role === UserRole.BOY)
         .sort((a, b) => b.points - a.points);
 
     return (
@@ -49,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck 
                     </div>
                 </Card>
 
-                <Card title="Leaderboard">
+                <Card title="Leaderboard (Live v1.1)">
                     <div className="space-y-3">
                         {sortedUsers.map((u, idx) => (
                             <div key={u.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
