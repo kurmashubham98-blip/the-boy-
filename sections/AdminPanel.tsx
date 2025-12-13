@@ -63,7 +63,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ users, onApprove, onReje
                                     <td className="p-3 font-bold">{u.name}</td>
                                     <td className="p-3 text-neon-purple font-mono">Lvl {u.level}</td>
                                     <td className="p-3">
-                                        <Badge color={u.role === UserRole.ADMIN ? 'bg-red-600' : 'bg-blue-600'}>{u.role}</Badge>
+                                        <Badge color={u.role === UserRole.ADMIN ? 'bg-red-600' : 'bg-blue-600'}>
+                                            {u.role === UserRole.BOY ? 'BOYS' : u.role}
+                                        </Badge>
                                     </td>
                                     <td className="p-3 text-gray-500 text-sm font-mono">{new Date(u.joinedAt).toLocaleDateString()}</td>
                                     <td className="p-3 text-right">
