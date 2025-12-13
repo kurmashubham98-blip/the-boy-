@@ -150,11 +150,24 @@ app.post('/api/tasks', async (req, res) => {
             // Here we handle Task Definition upsert.
 
             // 1. Upsert Task
+            const toMysqlDate = (isoStr) => isoStr ? new Date(isoStr).toISOString().slice(0, 19).replace('T', ' ') : null;
+
             await connection.query(
                 `INSERT INTO tasks (id, title, description, points, type, category, created_by, is_group_task, created_at, expires_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE title=VALUES(title), points=VALUES(points)`,
-                [t.id, t.title, t.description, t.points, t.type, t.category, t.createdBy, t.isGroupTask, t.createdAt, t.expiresAt]
+                [
+                    t.id,
+                    t.title,
+                    t.description,
+                    t.points,
+                    t.type,
+                    t.category,
+                    t.createdBy,
+                    t.isGroupTask ? 1 : 0,
+                    toMysqlDate(t.createdAt),
+                    toMysqlDate(t.expiresAt)
+                ]
             );
 
             // 2. Handle Completions (Syncing complete list is crude but effective for this migration)

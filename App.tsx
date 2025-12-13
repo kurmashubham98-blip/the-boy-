@@ -224,9 +224,19 @@ const App: React.FC = () => {
 
   // Create Task (Admin)
   const createTask = async (task: Task) => {
+    // Optimistic Update
+    const previousTasks = [...tasks];
     const newTasks = [task, ...tasks];
     setTasks(newTasks);
-    await StorageService.saveTasks(newTasks);
+
+    try {
+      await StorageService.saveTasks(newTasks);
+    } catch (error) {
+      console.error("Failed to save task:", error);
+      // Revert on failure
+      setTasks(previousTasks);
+      alert("Failed to save task to database. Please check your connection and try again.");
+    }
   };
 
   // Question Logic
