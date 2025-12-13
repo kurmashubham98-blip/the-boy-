@@ -9,11 +9,12 @@ import { Council } from './sections/Council';
 import { AILab } from './sections/AILab';
 import { AdminPanel } from './sections/AdminPanel';
 import { Profile } from './sections/Profile';
+import { TargetList } from './sections/TargetList';
 
 // --- MAIN APP ---
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'dashboard' | 'quests' | 'council' | 'ai' | 'admin' | 'profile'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'quests' | 'council' | 'ai' | 'admin' | 'profile' | 'targets'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,7 +58,7 @@ const App: React.FC = () => {
             setPendingStatus(false);
             setUserNameInput('');
             localStorage.removeItem('the_boys_user');
-            alert("CONNECTION TERMINATED: ACCESS DENIED BY ADMIN.");
+            alert("              <Button \n                variant={view === 'dashboard' ? 'primary' : 'ghost'} \n                onClick={() => setView('dashboard')}\n              >\n                THE BOYS\n              </Button>\n              <Button \n                variant={view === 'targets' ? 'primary' : 'ghost'} \n                onClick={() => setView('targets')}\n              >\n                TARGETS\n              </Button>MINATED: ACCESS DENIED BY ADMIN.");
           }
         }
       }
@@ -469,6 +470,7 @@ const App: React.FC = () => {
         {[
           { id: 'dashboard', label: 'Dashboard', icon: '📊' },
           { id: 'quests', label: 'The Barracks', icon: '⚔️' },
+          { id: 'targets', label: 'The Target List', icon: '🎯' },
           { id: 'council', label: 'The Council', icon: '⚖️' },
           { id: 'ai', label: 'AI Nexus', icon: '🤖' },
           ...(user.role === UserRole.ADMIN ? [{ id: 'admin', label: 'Admin Console', icon: '🛡️' }] : [])
@@ -539,6 +541,7 @@ const App: React.FC = () => {
         </header>
 
         {view === 'dashboard' && <Dashboard user={user} users={users} onLevelCheck={checkLevelUp} onUserClick={viewProfile} />}
+        {view === 'targets' && <TargetList user={user} />}
         {view === 'quests' && (
           <QuestLog
             user={user}
