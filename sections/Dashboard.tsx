@@ -1,3 +1,4 @@
+```typescript
 import React, { useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { Card, Badge } from '../components/Components';
@@ -7,9 +8,10 @@ interface DashboardProps {
     user: User;
     users: User[];
     onLevelCheck: () => void;
+    onUserClick: (id: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck, onUserClick }) => {
     const nextLevelPoints = user.level * 1000;
     const progress = (user.points / nextLevelPoints) * 100;
 
@@ -43,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck 
                         <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
                             <div
                                 className="bg-neon-blue h-full transition-all duration-500"
-                                style={{ width: `${Math.min(progress, 100)}%` }}
+                                style={{ width: `${ Math.min(progress, 100) }% ` }}
                             />
                         </div>
                     </div>
@@ -52,9 +54,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck 
                 <Card title="Leaderboard (Live v1.1)">
                     <div className="space-y-3">
                         {sortedUsers.map((u, idx) => (
-                            <div key={u.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
+                            <div 
+                                key={u.id} 
+                                className="flex items-center justify-between p-2 rounded hover:bg-white/5 cursor-pointer"
+                                onClick={() => onUserClick(u.id)}
+                            >
                                 <div className="flex items-center gap-3">
-                                    <span className={`font-mono font-bold w-6 ${idx === 0 ? 'text-yellow-400' : 'text-gray-500'}`}>#{idx + 1}</span>
+                                    <span className={`font - mono font - bold w - 6 ${ idx === 0 ? 'text-yellow-400' : 'text-gray-500' } `}>#{idx + 1}</span>
+                                    {/* Avatar Update */}
+                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden border border-gray-600">
+                                        {u.avatar ? (
+                                            <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs font-bold text-gray-300">{u.name.charAt(0)}</span>
+                                        )}
+                                    </div>
                                     <span>{u.name}</span>
                                     {u.role === UserRole.ADMIN && <span className="text-xs text-red-500 font-mono">[ADMIN]</span>}
                                 </div>

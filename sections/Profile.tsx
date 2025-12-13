@@ -1,19 +1,26 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User } from '../types';
 import { Button, Card, Input, Badge } from '../components/Components';
 
 interface ProfileProps {
     user: User;
     onUpdateUser: (updatedUser: User) => void;
+    readOnly?: boolean;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser, readOnly = false }) => {
     const [tags, setTags] = useState<string[]>(user.customTags || []);
     const [tagInput, setTagInput] = useState('');
     const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Sync state if user prop changes (important when switching profiles)
+    useEffect(() => {
+        setTags(user.customTags || []);
+    }, [user]);
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly) return;
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -32,6 +39,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
     };
 
     const addTag = () => {
+        if (readOnly) return;
         if (!tagInput.trim()) return;
         if (tags.length >= 3) {
             setError("Max 3 tags allowed.");
@@ -51,6 +59,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
     };
 
     const removeTag = (idx: number) => {
+        if (readOnly) return;
         const newTags = tags.filter((_, i) => i !== idx);
         setTags(newTags);
         onUpdateUser({ ...user, customTags: newTags });
@@ -58,7 +67,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
 
     return (
         <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-            <Card title="Agent Profile">
+            <Card title={readOnly ? "Agent Dossier" : "Agent Profile"}>
                 <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                     {/* Avatar Section */}
                     <div className="flex flex-col items-center gap-4">
@@ -70,19 +79,25 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                                     {user.name.charAt(0)}
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                onClick={() => fileInputRef.current?.click()}>
-                                <span className="text-xs text-neon-blue font-bold">UPLOAD</span>
-                            </div>
+                            {!readOnly && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                    onClick={() => fileInputRef.current?.click()}>
+                                    <span className="text-xs text-neon-blue font-bold">UPLOAD</span>
+                                </div>
+                            )}
                         </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                        />
-                        <p className="text-xs text-gray-500">Max 2MB</p>
+                        {!readOnly && (
+                            <>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                />
+                                <p className="text-xs text-gray-500">Max 2MB</p>
+                            </>
+                        )}
                     </div>
 
                     {/* Details Section */}
@@ -110,21 +125,23 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                                 {tags.map((tag, idx) => (
                                     <span key={idx} className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded border border-gray-600 flex items-center gap-2">
                                         {tag}
-                                        <button onClick={() => removeTag(idx)} className="text-red-500 hover:text-white">×</button>
+                                        {!readOnly && <button onClick={() => removeTag(idx)} className="text-red-500 hover:text-white">×</button>}
                                     </span>
                                 ))}
                                 {tags.length === 0 && <span className="text-sm text-gray-600 italic">No tags assigned.</span>}
                             </div>
 
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Add Tag (e.g. SNIPER)"
-                                    value={tagInput}
-                                    onChange={e => setTagInput(e.target.value)}
-                                    maxLength={10}
-                                />
-                                <Button onClick={addTag}>Add</Button>
-                            </div>
+                            {!readOnly && (
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add Tag (e.g. SNIPER)"
+                                        value={tagInput}
+                                        onChange={e => setTagInput(e.target.value)}
+                                        maxLength={10}
+                                    />
+                                    <Button onClick={addTag}>Add</Button>
+                                </div>
+                            )}
                             {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
                         </div>
                     </div>

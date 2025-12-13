@@ -24,6 +24,7 @@ const App: React.FC = () => {
 
   const [userNameInput, setUserNameInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // For viewing other profiles
 
   // Helper for efficient updates
   const hasChanged = (prev: any, curr: any) => JSON.stringify(prev) !== JSON.stringify(curr);
@@ -255,6 +256,11 @@ const App: React.FC = () => {
     const newUsers = users.map(u => u.id === updatedUser.id ? updatedUser : u);
     setUsers(newUsers);
     await StorageService.saveUsers(newUsers);
+  };
+
+  const viewProfile = (id: string) => {
+    setSelectedUserId(id);
+    setView('profile');
   };
 
   // Create Task (Admin)
@@ -492,7 +498,7 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-white capitalize">{view === 'quests' ? 'Active Operations' : view === 'council' ? 'The Council' : view === 'ai' ? 'AI Nexus' : view === 'admin' ? 'Admin Console' : view === 'profile' ? 'Agent Profile' : 'Command Center'}</h2>
             <p className="text-gray-500 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
-          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setView('profile')}>
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => viewProfile(user.id)}>
             <div className="text-right hidden sm:block">
               <div className="text-sm font-bold text-white">{user.name}</div>
               <div className="text-xs text-neon-purple font-mono">Level {user.level}</div>
@@ -507,7 +513,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {view === 'dashboard' && <Dashboard user={user} users={users} onLevelCheck={checkLevelUp} />}
+        {view === 'dashboard' && <Dashboard user={user} users={users} onLevelCheck={checkLevelUp} onUserClick={viewProfile} />}
         {view === 'quests' && (
           <QuestLog
             user={user}
@@ -537,7 +543,13 @@ const App: React.FC = () => {
             onReject={rejectUser}
           />
         )}
-        {view === 'profile' && <Profile user={user} onUpdateUser={updateUser} />}
+        {view === 'profile' && (
+          <Profile
+            user={selectedUserId ? users.find(u => u.id === selectedUserId) || user : user}
+            onUpdateUser={updateUser}
+            readOnly={!!selectedUserId && selectedUserId !== user.id}
+          />
+        )}
       </main>
     </div>
   );
