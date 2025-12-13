@@ -164,8 +164,22 @@ const App: React.FC = () => {
       localStorage.setItem('the_boys_user', existing.name); // PERSIST
       setPendingStatus(false);
     } else {
-      // Capture Device Info
-      const userAgent = navigator.userAgent;
+      // Capture Device Info (Human Readable)
+      const ua = navigator.userAgent;
+      let os = "Unknown OS";
+      if (ua.indexOf("Win") !== -1) os = "Windows";
+      if (ua.indexOf("Mac") !== -1) os = "MacOS";
+      if (ua.indexOf("Linux") !== -1) os = "Linux";
+      if (ua.indexOf("Android") !== -1) os = "Android";
+      if (ua.indexOf("like Mac") !== -1) os = "iOS";
+
+      let browser = "Unknown Browser";
+      if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+      if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+      if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Safari";
+      if (ua.indexOf("Edg") !== -1) browser = "Edge";
+
+      const deviceFriendly = `${browser} on ${os}`;
       const isHomelander = matchName(userNameInput);
 
       const newUser: User = {
@@ -175,7 +189,7 @@ const App: React.FC = () => {
         points: 0,
         level: 1,
         joinedAt: new Date().toISOString(),
-        deviceDetails: userAgent
+        deviceDetails: deviceFriendly // Saved as human readable
       };
 
       const newUsers = [...currentUsers, newUser];
