@@ -17,7 +17,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, users, onLevelCheck 
         onLevelCheck();
     }, [user.points, onLevelCheck]);
 
-    const sortedUsers = [...users].sort((a, b) => b.points - a.points);
+    const sortedUsers = users
+        .filter(u => u.role !== UserRole.REJECTED && u.role !== UserRole.PENDING)
+        .sort((a, b) => b.points - a.points);
 
     return (
         <div className="space-y-6">
