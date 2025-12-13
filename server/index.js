@@ -54,9 +54,15 @@ async function initDB(conn) {
                 points INT DEFAULT 0,
                 level INT DEFAULT 1,
                 joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                device_details TEXT
+                device_details TEXT,
+                avatar LONGTEXT,
+                custom_tags TEXT
             )
         `);
+
+        // Migrations (Idempotent) - Add columns if they don't exist
+        try { await conn.query("ALTER TABLE users ADD COLUMN avatar LONGTEXT"); } catch (e) { /* ignore if exists */ }
+        try { await conn.query("ALTER TABLE users ADD COLUMN custom_tags TEXT"); } catch (e) { /* ignore if exists */ }
 
         // Tasks Table
         await conn.query(`
@@ -157,7 +163,9 @@ app.get('/api/users', async (req, res) => {
             points: u.points,
             level: u.level,
             joinedAt: u.joined_at,
-            deviceDetails: u.device_details
+            deviceDetails: u.device_details,
+            avatar: u.avatar,
+            customTags: u.custom_tags ? JSON.parse(u.custom_tags) : []
         }));
         res.json(users);
     } catch (err) {
@@ -167,15 +175,15 @@ app.get('/api/users', async (req, res) => {
 });
 
 app.post('/api/users', async (req, res) => {
-    const { id, name, role, points, level, joinedAt, deviceDetails } = req.body;
+    const { id, name, role, points, level, joinedAt, deviceDetails, avatar, customTags } = req.body;
     try {
         // Upsert logic (Insert or Update)
         await pool.query(
-            `INSERT INTO users (id, name, role, points, level, joined_at, device_details) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO users (id, name, role, points, level, joined_at, device_details, avatar, custom_tags) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE 
-             name=VALUES(name), role=VALUES(role), points=VALUES(points), level=VALUES(level), device_details=VALUES(device_details)`,
-            [id, name, role, points, level, joinedAt, deviceDetails]
+             name=VALUES(name), role=VALUES(role), points=VALUES(points), level=VALUES(level), device_details=VALUES(device_details), avatar=VALUES(avatar), custom_tags=VALUES(custom_tags)`,
+            [id, name, role, points, level, joinedAt, deviceDetails, avatar, JSON.stringify(customTags || [])]
         );
         res.json({ success: true });
     } catch (err) {
@@ -194,11 +202,11 @@ app.post('/api/users/batch', async (req, res) => {
 
         for (const u of users) {
             await connection.query(
-                `INSERT INTO users (id, name, role, points, level, joined_at, device_details) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)
+                `INSERT INTO users (id, name, role, points, level, joined_at, device_details, avatar, custom_tags) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE 
-                 name=VALUES(name), role=VALUES(role), points=VALUES(points), level=VALUES(level), device_details=VALUES(device_details)`,
-                [u.id, u.name, u.role, u.points, u.level, u.joinedAt, u.deviceDetails]
+                 name=VALUES(name), role=VALUES(role), points=VALUES(points), level=VALUES(level), device_details=VALUES(device_details), avatar=VALUES(avatar), custom_tags=VALUES(custom_tags)`,
+                [u.id, u.name, u.role, u.points, u.level, u.joinedAt, u.deviceDetails, u.avatar, JSON.stringify(u.customTags || [])]
             );
         }
 

@@ -8,11 +8,12 @@ import { QuestLog } from './sections/QuestLog';
 import { Council } from './sections/Council';
 import { AILab } from './sections/AILab';
 import { AdminPanel } from './sections/AdminPanel';
+import { Profile } from './sections/Profile';
 
 // --- MAIN APP ---
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'dashboard' | 'quests' | 'council' | 'ai' | 'admin'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'quests' | 'council' | 'ai' | 'admin' | 'profile'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -248,6 +249,14 @@ const App: React.FC = () => {
     }
   };
 
+  // Profile Actions
+  const updateUser = async (updatedUser: User) => {
+    setUser(updatedUser); // Optimistic
+    const newUsers = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+    setUsers(newUsers);
+    await StorageService.saveUsers(newUsers);
+  };
+
   // Create Task (Admin)
   const createTask = async (task: Task) => {
     // Optimistic Update
@@ -480,16 +489,20 @@ const App: React.FC = () => {
       <main className="max-w-5xl mx-auto p-4 md:p-8 pt-6">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white capitalize">{view === 'quests' ? 'Active Operations' : view === 'council' ? 'The Council' : view === 'ai' ? 'AI Nexus' : view === 'admin' ? 'Admin Console' : 'Command Center'}</h2>
+            <h2 className="text-2xl font-bold text-white capitalize">{view === 'quests' ? 'Active Operations' : view === 'council' ? 'The Council' : view === 'ai' ? 'AI Nexus' : view === 'admin' ? 'Admin Console' : view === 'profile' ? 'Agent Profile' : 'Command Center'}</h2>
             <p className="text-gray-500 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setView('profile')}>
             <div className="text-right hidden sm:block">
               <div className="text-sm font-bold text-white">{user.name}</div>
               <div className="text-xs text-neon-purple font-mono">Level {user.level}</div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-              {user.name.charAt(0)}
+            <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden">
+              {user.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                user.name.charAt(0)
+              )}
             </div>
           </div>
         </header>
@@ -524,6 +537,7 @@ const App: React.FC = () => {
             onReject={rejectUser}
           />
         )}
+        {view === 'profile' && <Profile user={user} onUpdateUser={updateUser} />}
       </main>
     </div>
   );

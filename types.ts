@@ -13,6 +13,8 @@ export interface User {
   level: number;
   joinedAt: string;
   deviceDetails?: string; // New field for security check
+  avatar?: string;
+  customTags?: string[];
 }
 
 export enum TaskType {
