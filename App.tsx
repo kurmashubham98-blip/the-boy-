@@ -24,45 +24,47 @@ const App: React.FC = () => {
   const [userNameInput, setUserNameInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState(false);
 
-  // Real-time Polling
+  // Helper for efficient updates
+  const hasChanged = (prev: any, curr: any) => JSON.stringify(prev) !== JSON.stringify(curr);
+
+  // Real-time Polling (Users, Tasks, Questions)
   useEffect(() => {
-    // Only poll if we have initialized
     if (isLoading) return;
 
     const intervalId = setInterval(async () => {
-      // 1. Fetch Fresh Users to check for new recruits or status updates
-      const fetchedUsers = await StorageService.getUsers();
+      const [fetchedUsers, fetchedTasks, fetchedQuestions] = await Promise.all([
+        StorageService.getUsers(),
+        StorageService.getTasks(),
+        StorageService.getQuestions()
+      ]);
 
-      // Update users list if changed (Naive deep compare for prototype)
-      setUsers(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(fetchedUsers)) {
-          return fetchedUsers;
-        }
-        return prev;
-      });
+      setUsers(prev => hasChanged(prev, fetchedUsers) ? fetchedUsers : prev);
+      setTasks(prev => hasChanged(prev, fetchedTasks) ? fetchedTasks : prev);
+      setQuestions(prev => hasChanged(prev, fetchedQuestions) ? fetchedQuestions : prev);
 
-      // 2. If user is PENDING, check if they have been approved
+      // PENDING check
       if (pendingStatus && user) {
         const me = fetchedUsers.find(u => u.id === user.id);
         if (me) {
           if (me.role === UserRole.BOY) {
             setUser(me);
             setPendingStatus(false);
+            localStorage.setItem('the_boys_user', me.name); // Confirm persistence on approval
           } else if (me.role === UserRole.REJECTED) {
             setUser(null);
             setPendingStatus(false);
             setUserNameInput('');
+            localStorage.removeItem('the_boys_user');
             alert("CONNECTION TERMINATED: ACCESS DENIED BY ADMIN.");
           }
         }
       }
-
-    }, 4000); // Check every 4 seconds
+    }, 4000);
 
     return () => clearInterval(intervalId);
   }, [isLoading, user, pendingStatus]);
 
-  // Initial Data Fetch
+  // Initial Data Fetch & Auto-Login
   useEffect(() => {
     const fetchData = async () => {
       const [u, t, q] = await Promise.all([
@@ -73,6 +75,25 @@ const App: React.FC = () => {
       setUsers(u);
       setTasks(t);
       setQuestions(q);
+
+      // Auto-Login Check
+      const savedName = localStorage.getItem('the_boys_user');
+      if (savedName) {
+        setUserNameInput(savedName);
+        const existing = u.find(user => user.name.toLowerCase() === savedName.toLowerCase());
+        if (existing) {
+          // Homelander Check
+          if (existing.name.toLowerCase() === 'homelander') {
+            setUser({ ...existing, role: UserRole.ADMIN });
+          } else if (existing.role === UserRole.PENDING) {
+            setUser(existing);
+            setPendingStatus(true);
+          } else if (existing.role !== UserRole.REJECTED) {
+            setUser(existing);
+          }
+        }
+      }
+
       setIsLoading(false);
     };
     fetchData();
@@ -109,6 +130,7 @@ const App: React.FC = () => {
       if (matchName(existing.name)) {
         const adminUser = { ...existing, role: UserRole.ADMIN };
         setUser(adminUser);
+        localStorage.setItem('the_boys_user', existing.name); // PERSIST
 
         // Update DB if they weren't admin before
         if (existing.role !== UserRole.ADMIN) {
@@ -124,6 +146,7 @@ const App: React.FC = () => {
 
       if (existing.role === UserRole.REJECTED) {
         alert("ACCESS DENIED. You have been blacklisted from The Boys.");
+        localStorage.removeItem('the_boys_user');
         setIsLoading(false);
         return;
       }
@@ -131,10 +154,12 @@ const App: React.FC = () => {
         setPendingStatus(true);
         // Temporarily set user so polling knows who to check
         setUser(existing);
+        localStorage.setItem('the_boys_user', existing.name); // PERSIST (So they see pending screen on refresh)
         setIsLoading(false);
         return;
       }
       setUser(existing);
+      localStorage.setItem('the_boys_user', existing.name); // PERSIST
       setPendingStatus(false);
     } else {
       // Capture Device Info
@@ -156,6 +181,7 @@ const App: React.FC = () => {
       setUsers(newUsers);
       setUser(newUser); // Set user so polling can check this ID
       setPendingStatus(!isHomelander);
+      localStorage.setItem('the_boys_user', newUser.name); // PERSIST
     }
     setIsLoading(false);
   };
