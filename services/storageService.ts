@@ -9,7 +9,10 @@ const apiFetch = async (endpoint: string, options?: RequestInit) => {
       headers: { 'Content-Type': 'application/json' },
       ...options
     });
-    if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `API Error: ${res.statusText}`);
+    }
     return await res.json();
   } catch (err: any) {
     console.error(`Fetch failed for ${endpoint}:`, err);
