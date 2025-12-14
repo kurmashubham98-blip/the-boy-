@@ -8,17 +8,24 @@ interface CouncilProps {
     questions: Question[];
     onVoteQuestion: (qId: string, type: 'up' | 'down') => void;
     onAddQuestion: (q: Partial<Question>) => void;
+    onEditQuestion: (qId: string, title: string, content: string) => void;
     onAddSolution: (qId: string, solution: string) => void;
     onVoteSolution: (qId: string, sId: string) => void;
     onMarkBestAnswer: (qId: string, sId: string) => void;
     isAdmin: boolean;
 }
 
-export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVoteQuestion, onAddQuestion, onAddSolution, onVoteSolution, onMarkBestAnswer, isAdmin }) => {
+export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVoteQuestion, onAddQuestion, onEditQuestion, onAddSolution, onVoteSolution, onMarkBestAnswer, isAdmin }) => {
     const [newQTitle, setNewQTitle] = useState('');
     const [newQDesc, setNewQDesc] = useState('');
     const [solvingId, setSolvingId] = useState<string | null>(null);
     const [solutionText, setSolutionText] = useState('');
+    const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+
+    // Edit State
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDesc, setEditDesc] = useState('');
 
     const submitQuestion = () => {
         if (!newQTitle) return;
@@ -27,33 +34,99 @@ export const Council: React.FC<CouncilProps> = ({ user, users, questions, onVote
         setNewQDesc('');
     };
 
+    const startEdit = (q: Question) => {
+        setEditingId(q.id);
+        setEditTitle(q.title);
+        setEditDesc(q.content);
+    };
+
+    const saveEdit = (qId: string) => {
+        onEditQuestion(qId, editTitle, editDesc);
+        setEditingId(null);
+    };
+
+    // Filter Questions
+    const filteredQuestions = questions.filter(q => {
+        const isSolved = q.solutions.some(s => s.isBestAnswer);
+        if (activeTab === 'active') return !isSolved && !q.dropped;
+        if (activeTab === 'archive') return isSolved;
+        return false;
+    });
+
     return (
         <div className="space-y-8">
-            <Card title="Propose to The Council">
-                <div className="space-y-4">
-                    <Input placeholder="Question / Challenge Title" value={newQTitle} onChange={e => setNewQTitle(e.target.value)} />
-                    <TextArea placeholder="Details..." value={newQDesc} onChange={e => setNewQDesc(e.target.value)} />
-                    <Button onClick={submitQuestion} className="w-full">Post for Review</Button>
-                    {!isAdmin && <p className="text-xs text-red-400 text-center">Warning: If The Boys reject this (-5 votes), you lose 5 points.</p>}
-                </div>
-            </Card>
+            <div className="flex justify-center gap-4 mb-4">
+                <Button
+                    variant={activeTab === 'active' ? 'primary' : 'secondary'}
+                    onClick={() => setActiveTab('active')}
+                >
+                    ACTIVE OPERATIONS
+                </Button>
+                <Button
+                    variant={activeTab === 'archive' ? 'primary' : 'secondary'}
+                    onClick={() => setActiveTab('archive')}
+                >
+                    ARCHIVES (RESOLVED)
+                </Button>
+            </div>
+
+            {activeTab === 'active' && (
+                <Card title="Propose to The Council">
+                    <div className="space-y-4">
+                        <Input placeholder="Question / Challenge Title" value={newQTitle} onChange={e => setNewQTitle(e.target.value)} />
+                        <TextArea placeholder="Details..." value={newQDesc} onChange={e => setNewQDesc(e.target.value)} />
+                        <Button onClick={submitQuestion} className="w-full">Post for Review</Button>
+                        {!isAdmin && <p className="text-xs text-red-400 text-center">Warning: If The Boys reject this (-5 votes), you lose 5 points.</p>}
+                    </div>
+                </Card>
+            )}
 
             <div className="space-y-6">
-                {questions.filter(q => !q.dropped).map(q => {
+                {filteredQuestions.map(q => {
                     const hasVotedQ = q.upvotes.includes(user.id) || q.downvotes.includes(user.id);
                     const score = q.upvotes.length - q.downvotes.length;
 
                     return (
                         <Card key={q.id} className="relative overflow-hidden">
                             {q.isInterestCheck && (
-                                <div className="absolute top-0 right-0 bg-yellow-600/20 text-yellow-500 text-xs px-2 py-1 rounded-bl">
-                                    VOTING PHASE
+                                <div className="absolute top-0 right-0 flex gap-2">
+                                    {/* 5 Minute Edit Window */}
+                                    {user.id === q.authorId && Date.now() - new Date(q.createdAt).getTime() < 5 * 60 * 1000 && (
+                                        <button
+                                            onClick={() => startEdit(q)}
+                                            className="bg-blue-600 text-white text-xs px-2 py-1 rounded-bl hover:bg-blue-500"
+                                        >
+                                            EDIT
+                                        </button>
+                                    )}
+                                    <div className="bg-yellow-600/20 text-yellow-500 text-xs px-2 py-1 rounded-bl">
+                                        VOTING PHASE
+                                    </div>
+                                </div>
+                            )}
+                            {/* Archived Badge */}
+                            {activeTab === 'archive' && (
+                                <div className="absolute top-0 right-0 bg-green-600/20 text-green-500 text-xs px-4 py-1 rounded-bl font-mono">
+                                    RESOLVED
                                 </div>
                             )}
 
                             <div className="mb-4">
-                                <h3 className="text-xl font-bold">{q.title}</h3>
-                                <p className="text-gray-400 mt-2">{q.content}</p>
+                                {editingId === q.id ? (
+                                    <div className="space-y-2 mb-4 bg-black/40 p-3 rounded border border-blue-900">
+                                        <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="Edit Title" />
+                                        <TextArea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Edit Details" />
+                                        <div className="flex gap-2 justify-end">
+                                            <Button variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
+                                            <Button onClick={() => saveEdit(q.id)}>Save Changes</Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h3 className="text-xl font-bold">{q.title}</h3>
+                                        <p className="text-gray-400 mt-2">{q.content}</p>
+                                    </>
+                                )}
                             </div>
 
                             {q.isInterestCheck ? (

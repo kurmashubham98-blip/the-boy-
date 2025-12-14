@@ -387,7 +387,7 @@ app.post('/api/questions', async (req, res) => {
                 `INSERT INTO questions (id, author_id, title, content, is_interest_check, dropped, admin_approved, majority_approved, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE 
-                 is_interest_check=VALUES(is_interest_check), dropped=VALUES(dropped), admin_approved=VALUES(admin_approved), majority_approved=VALUES(majority_approved)`,
+                 title=VALUES(title), content=VALUES(content), is_interest_check=VALUES(is_interest_check), dropped=VALUES(dropped), admin_approved=VALUES(admin_approved), majority_approved=VALUES(majority_approved)`,
                 [q.id, q.authorId, q.title, q.content, q.isInterestCheck, q.dropped, q.adminApproved || false, q.majorityApproved || false, q.createdAt]
             );
 

@@ -350,6 +350,18 @@ const App: React.FC = () => {
     await StorageService.saveQuestions(newQuestions);
   };
 
+  const editQuestion = async (qId: string, title: string, content: string) => {
+    if (!user) return;
+    const newQuestions = questions.map(q => {
+      if (q.id !== qId) return q;
+      // Allow edit only if author (double check)
+      if (q.authorId !== user.id && user.role !== UserRole.ADMIN) return q;
+      return { ...q, title, content };
+    });
+    setQuestions(newQuestions);
+    await StorageService.saveQuestions(newQuestions);
+  };
+
   const voteQuestion = async (qId: string, type: 'up' | 'down') => {
     if (!user) return;
 
@@ -652,6 +664,7 @@ const App: React.FC = () => {
             users={users}
             questions={questions}
             onAddQuestion={addQuestion}
+            onEditQuestion={editQuestion}
             onVoteQuestion={voteQuestion}
             onAddSolution={addSolution}
             onVoteSolution={voteSolution}
