@@ -359,7 +359,7 @@ const App: React.FC = () => {
       if (user.role === UserRole.ADMIN && !votedQ.adminApproved && author) {
         userUpdates[author.id] = (userUpdates[author.id] || 0) + 5;
         updatedQuestions = updatedQuestions.map(q =>
-          q.id === qId ? { ...q, adminApproved: true } : q
+          q.id === qId ? { ...q, adminApproved: true, isInterestCheck: false } : q
         );
       }
 
@@ -372,7 +372,7 @@ const App: React.FC = () => {
         if (boyUpvotes >= Math.ceil(totalBoys / 2)) {
           userUpdates[author.id] = (userUpdates[author.id] || 0) + 5;
           updatedQuestions = updatedQuestions.map(q =>
-            q.id === qId ? { ...q, majorityApproved: true } : q
+            q.id === qId ? { ...q, majorityApproved: true, isInterestCheck: false } : q
           );
         }
       }
