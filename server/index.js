@@ -170,6 +170,17 @@ async function initDB(conn) {
             )
         `);
 
+        // MIGRATION: 2025-12-14 - Council Rewards
+        try {
+            await conn.query(`ALTER TABLE questions ADD COLUMN admin_approved BOOLEAN DEFAULT FALSE`);
+        } catch (e) { /* Ignore if exists */ }
+        try {
+            await conn.query(`ALTER TABLE questions ADD COLUMN majority_approved BOOLEAN DEFAULT FALSE`);
+        } catch (e) { /* Ignore if exists */ }
+        try {
+            await conn.query(`ALTER TABLE solutions ADD COLUMN is_best_answer BOOLEAN DEFAULT FALSE`);
+        } catch (e) { /* Ignore if exists */ }
+
         console.log("✅ Schema initialized");
     } catch (err) {
         console.error("❌ Schema initialization failed:", err);
@@ -343,6 +354,8 @@ app.get('/api/questions', async (req, res) => {
             content: q.content,
             isInterestCheck: !!q.is_interest_check,
             dropped: !!q.dropped,
+            adminApproved: !!q.admin_approved,
+            majorityApproved: !!q.majority_approved,
             createdAt: q.created_at,
             upvotes: qVotes.filter(v => v.question_id === q.id && v.vote_type === 'UP').map(v => v.user_id),
             downvotes: qVotes.filter(v => v.question_id === q.id && v.vote_type === 'DOWN').map(v => v.user_id),
@@ -350,6 +363,7 @@ app.get('/api/questions', async (req, res) => {
                 id: s.id,
                 authorId: s.author_id,
                 content: s.content,
+                isBestAnswer: !!s.is_best_answer,
                 votes: sVotes.filter(sv => sv.solution_id === s.id).map(sv => sv.user_id)
             }))
         }));
@@ -370,11 +384,11 @@ app.post('/api/questions', async (req, res) => {
 
         for (const q of questions) {
             await connection.query(
-                `INSERT INTO questions (id, author_id, title, content, is_interest_check, dropped, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)
+                `INSERT INTO questions (id, author_id, title, content, is_interest_check, dropped, admin_approved, majority_approved, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE 
-                 is_interest_check=VALUES(is_interest_check), dropped=VALUES(dropped)`,
-                [q.id, q.authorId, q.title, q.content, q.isInterestCheck, q.dropped, q.createdAt]
+                 is_interest_check=VALUES(is_interest_check), dropped=VALUES(dropped), admin_approved=VALUES(admin_approved), majority_approved=VALUES(majority_approved)`,
+                [q.id, q.authorId, q.title, q.content, q.isInterestCheck, q.dropped, q.adminApproved || false, q.majorityApproved || false, q.createdAt]
             );
 
             // Sync Votes
@@ -385,8 +399,9 @@ app.post('/api/questions', async (req, res) => {
             // Sync Solutions
             for (const s of q.solutions) {
                 await connection.query(
-                    `INSERT INTO solutions (id, question_id, author_id, content) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE content=content`,
-                    [s.id, q.id, s.authorId, s.content]
+                    `INSERT INTO solutions (id, question_id, author_id, content, is_best_answer) VALUES (?, ?, ?, ?, ?) 
+                     ON DUPLICATE KEY UPDATE content=content, is_best_answer=VALUES(is_best_answer)`,
+                    [s.id, q.id, s.authorId, s.content, s.isBestAnswer || false]
                 );
                 // Sync Solution Votes
                 await connection.query('DELETE FROM solution_votes WHERE solution_id = ?', [s.id]);
