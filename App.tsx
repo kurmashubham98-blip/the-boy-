@@ -100,7 +100,30 @@ const App: React.FC = () => {
       setIsLoading(false);
     };
     fetchData();
-  }, []);
+
+    // Real-time Polling (Every 3 seconds)
+    const interval = setInterval(async () => {
+      // Background fetch - silent update
+      const [u, t, q] = await Promise.all([
+        StorageService.getUsers(),
+        StorageService.getTasks(),
+        StorageService.getQuestions()
+      ]);
+      setUsers(u);
+      setTasks(t);
+      setQuestions(q);
+
+      // Update current user if stats changed
+      if (user) {
+        const updatedSelf = u.find(x => x.id === user.id);
+        if (updatedSelf && (updatedSelf.points !== user.points || updatedSelf.role !== user.role)) {
+          setUser({ ...user, points: updatedSelf.points, role: updatedSelf.role });
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user]); // Dep on user to ensure we update self correctly
 
   // Level Logic
   const checkLevelUp = useCallback(async () => {
