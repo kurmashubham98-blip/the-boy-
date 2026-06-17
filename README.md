@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# The Boy — AI-Powered Group Platform
 
-# Run and deploy your AI Studio app
+A multiplayer productivity platform with AI integration. Features a council dashboard, quest system, AI lab, admin panel, and real-time target tracking.
 
-This contains everything you need to run your app locally.
+Built with React + Vite + TypeScript on the frontend and an Express/Node.js backend.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1kver_v9nlFJmgfO6gh050-rGfoRTsuhd
+## Features
 
-## Run Locally
+- **Council Dashboard** — Group overview and activity feed
+- **Quest Log** — Track and manage group quests
+- **AI Lab** — Gemini-powered AI features
+- **Target List** — Track goals and progress
+- **Admin Panel** — Manage users and settings
+- **Profile** — Personal stats and achievements
+- **Incoming Signal Alerts** — Real-time notifications
 
-**Prerequisites:**  Node.js
+## Tech Stack
 
+| Layer | Tech |
+|-------|------|
+| Frontend | React + Vite, TypeScript |
+| Backend | Node.js, Express |
+| Database | MySQL |
+| AI | Google Gemini API |
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Getting Started
+
+```bash
+npm install
+# Set GEMINI_API_KEY in .env.local
+npm run dev
+```
+
+Run `db_schema.sql` to set up your database.
+
+## License
+
+MIT
